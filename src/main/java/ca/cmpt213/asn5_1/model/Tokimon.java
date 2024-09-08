@@ -1,6 +1,7 @@
-package ca.cmpt213.asn5_1.server;
+package ca.cmpt213.asn5_1.model;
 
 public class Tokimon {
+    public static long idCounter = 0;
     private Long id;
     private String name;
     private String type;
@@ -10,8 +11,8 @@ public class Tokimon {
 
     public Tokimon() {}
 
-    public Tokimon(Long id, String name, String type, int rarity, String pictureUrl, int hp) {
-        this.id = id;
+    public Tokimon(String name, String type, int rarity, String pictureUrl, int hp) {
+        this.id = ++idCounter;
         this.name = name;
         this.type = type;
         this.rarity = rarity;
@@ -65,6 +66,13 @@ public class Tokimon {
     }
 
     public void setHp(int hp) {
+        if (hp < 0) {
+            throw new IllegalArgumentException("HP cannot be negative");
+        }
         this.hp = hp;
+    }
+
+    public static long getIdCounter(){
+        return ++idCounter;
     }
 }

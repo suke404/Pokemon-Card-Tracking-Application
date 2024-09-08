@@ -1,5 +1,6 @@
-package ca.cmpt213.asn5_1.server;
+package ca.cmpt213.asn5_1.repository;
 
+import ca.cmpt213.asn5_1.model.Tokimon;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import org.springframework.stereotype.Repository;
@@ -9,6 +10,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.io.InputStream;
+import java.net.URL;
+
 
 @Repository
 public class TokimonRepository {
@@ -18,7 +22,18 @@ public class TokimonRepository {
 
     public TokimonRepository() {
         try {
-            tokimonList = objectMapper.readValue(new File(FILE_PATH), new TypeReference<List<Tokimon>>() {});
+            URL resource = getClass().getClassLoader().getResource(FILE_PATH);
+            if (resource == null) {
+                File file = new File(getClass().getClassLoader().getResource("").getPath() + FILE_PATH);
+                file.getParentFile().mkdirs();
+                file.createNewFile();
+                tokimonList = new ArrayList<>();
+                saveToFile();
+            } else {
+                InputStream is = resource.openStream();
+                tokimonList = objectMapper.readValue(is, new TypeReference<List<Tokimon>>() {});
+                is.close();
+            }
         } catch (IOException e) {
             tokimonList = new ArrayList<>();
         }
@@ -31,6 +46,7 @@ public class TokimonRepository {
     public Optional<Tokimon> findById(Long id) {
         return tokimonList.stream().filter(tokimon -> tokimon.getId().equals(id)).findFirst();
     }
+
 
     public void save(Tokimon tokimon) {
         tokimonList.add(tokimon);
@@ -52,7 +68,14 @@ public class TokimonRepository {
 
     private void saveToFile() {
         try {
-            objectMapper.writeValue(new File(FILE_PATH), tokimonList);
+            URL resource = getClass().getClassLoader().getResource(FILE_PATH);
+            File file;
+            if (resource == null) {
+                file = new File(getClass().getClassLoader().getResource("").getPath() + FILE_PATH);
+            } else {
+                file = new File(resource.getPath());
+            }
+            objectMapper.writeValue(file, tokimonList);
         } catch (IOException e) {
             e.printStackTrace();
         }

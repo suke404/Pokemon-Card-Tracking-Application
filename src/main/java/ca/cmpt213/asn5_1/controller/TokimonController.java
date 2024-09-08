@@ -1,5 +1,7 @@
-package ca.cmpt213.asn5_1.server;
+package ca.cmpt213.asn5_1.controller;
 
+import ca.cmpt213.asn5_1.model.Tokimon;
+import ca.cmpt213.asn5_1.service.TokimonService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -50,5 +52,11 @@ public class TokimonController {
         } else {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+    }
+
+    @DeleteMapping("/deleteAll")
+    public ResponseEntity<Void> deleteAllTokimons() {
+        tokimonService.deleteAllTokimons();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

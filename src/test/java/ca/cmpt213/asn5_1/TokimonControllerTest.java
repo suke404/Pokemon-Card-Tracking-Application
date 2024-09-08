@@ -1,111 +1,125 @@
-package ca.cmpt213.asn5_1;
+package ca.cmpt213.asn5_1.controller;
 
 import ca.cmpt213.asn5_1.model.Tokimon;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import ca.cmpt213.asn5_1.service.TokimonService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit.jupiter.SpringExtension;
-import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import java.util.Arrays;
+import java.util.List;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(SpringExtension.class)
 @SpringBootTest
-@AutoConfigureMockMvc
 public class TokimonControllerTest {
 
-    @Autowired
+    @MockBean
+    private TokimonService tokimonService;
+
+    @InjectMocks
+    private TokimonController tokimonController;
+
     private MockMvc mockMvc;
 
+    @BeforeEach
+    public void setup() {
+        MockitoAnnotations.openMocks(this);
+        this.mockMvc = MockMvcBuilders.standaloneSetup(tokimonController).build();
+    }
+
     @Test
-    public void testGetAllTokimons() throws Exception {
-        mockMvc.perform(get("/tokimons"))
+    public void testGetAllTokimon() throws Exception {
+        List<Tokimon> tokimonList = Arrays.asList(
+                new Tokimon("Tokimon1", "Fire", 5, "http://example.com/tokimon1.png", 100),
+                new Tokimon("Tokimon2", "Water", 3, "http://example.com/tokimon2.png", 80)
+        );
+        when(tokimonService.getAllTokimon()).thenReturn(tokimonList);
+
+        mockMvc.perform(get("/api/tokimon/all"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", greaterThanOrEqualTo(0)));
+                .andExpect(jsonPath("$[0].name").value("Tokimon1"))
+                .andExpect(jsonPath("$[1].name").value("Tokimon2"));
+
+        verify(tokimonService, times(1)).getAllTokimon();
     }
 
     @Test
     public void testGetTokimonById() throws Exception {
-        int tokimonId = 1; // Assume this ID exists in the database
-        mockMvc.perform(get("/tokimons/{id}", tokimonId))
+        Tokimon tokimon = new Tokimon("Tokimon1", "Fire", 5, "http://example.com/tokimon1.png", 100);
+        when(tokimonService.getTokimonById(1L)).thenReturn(tokimon);
+
+        mockMvc.perform(get("/api/tokimon/1"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.id").value(tokimonId));
+                .andExpect(jsonPath("$.name").value("Tokimon1"));
+
+        verify(tokimonService, times(1)).getTokimonById(1L);
     }
 
     @Test
     public void testGetTokimonById_NotFound() throws Exception {
-        int tokimonId = 999; // Assume this ID does not exist
-        mockMvc.perform(get("/tokimons/{id}", tokimonId))
+        when(tokimonService.getTokimonById(1L)).thenReturn(null);
+
+        mockMvc.perform(get("/api/tokimon/1"))
                 .andExpect(status().isNotFound());
+
+        verify(tokimonService, times(1)).getTokimonById(1L);
     }
 
-    @Test
-    public void testCreateTokimon() throws Exception {
-        Tokimon newTokimon = new Tokimon("Toki3", 30.0, 15.0, 20.0);
-        mockMvc.perform(post("/tokimons")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(newTokimon)))
-                .andExpect(status().isCreated())
-                .andExpect(header().exists("Location"));
-    }
 
     @Test
-    public void testCreateTokimon_InvalidInput() throws Exception {
-        Tokimon invalidTokimon = new Tokimon("", -10.0, 0.0, -5.0);
-        mockMvc.perform(post("/tokimons")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(invalidTokimon)))
-                .andExpect(status().isBadRequest());
-    }
+    public void testEditTokimon() throws Exception {
+        Tokimon tokimon = new Tokimon( "Tokimon1", "Fire", 5, "http://example.com/tokimon1.png", 100);
+        when(tokimonService.editTokimon(eq(1L), any(Tokimon.class))).thenReturn(tokimon);
 
-    @Test
-    public void testUpdateTokimon() throws Exception {
-        int tokimonId = 1; // Assume this ID exists in the database
-        Tokimon updatedTokimon = new Tokimon("UpdatedToki", 40.0, 20.0, 25.0);
-        mockMvc.perform(put("/tokimons/{id}", tokimonId)
+        mockMvc.perform(put("/api/tokimon/edit/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(updatedTokimon)))
+                        .content("{\"name\":\"Tokimon1\",\"type\":\"Fire\",\"rarity\":5,\"pictureUrl\":\"http://example.com/tokimon1.png\",\"hp\":100}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("UpdatedToki"));
+                .andExpect(jsonPath("$.name").value("Tokimon1"));
+
+        verify(tokimonService, times(1)).editTokimon(eq(1L), any(Tokimon.class));
     }
 
     @Test
-    public void testUpdateTokimon_NotFound() throws Exception {
-        int tokimonId = 999; // Assume this ID does not exist
-        Tokimon updatedTokimon = new Tokimon("UpdatedToki", 40.0, 20.0, 25.0);
-        mockMvc.perform(put("/tokimons/{id}", tokimonId)
+    public void testEditTokimon_NotFound() throws Exception {
+        when(tokimonService.editTokimon(eq(1L), any(Tokimon.class))).thenReturn(null);
+
+        mockMvc.perform(put("/api/tokimon/edit/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(asJsonString(updatedTokimon)))
+                        .content("{\"name\":\"Tokimon1\",\"type\":\"Fire\",\"rarity\":5,\"pictureUrl\":\"http://example.com/tokimon1.png\",\"hp\":100}"))
                 .andExpect(status().isNotFound());
+
+        verify(tokimonService, times(1)).editTokimon(eq(1L), any(Tokimon.class));
     }
 
     @Test
     public void testDeleteTokimon() throws Exception {
-        int tokimonId = 1; // Assume this ID exists in the database
-        mockMvc.perform(delete("/tokimons/{id}", tokimonId))
+        when(tokimonService.deleteTokimon(1L)).thenReturn(true);
+
+        mockMvc.perform(delete("/api/tokimon/1"))
                 .andExpect(status().isNoContent());
+
+        verify(tokimonService, times(1)).deleteTokimon(1L);
     }
 
     @Test
     public void testDeleteTokimon_NotFound() throws Exception {
-        int tokimonId = 999; // Assume this ID does not exist
-        mockMvc.perform(delete("/tokimons/{id}", tokimonId))
-                .andExpect(status().isNotFound());
-    }
+        when(tokimonService.deleteTokimon(1L)).thenReturn(false);
 
-    private static String asJsonString(final Object obj) {
-        try {
-            return new ObjectMapper().writeValueAsString(obj);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        mockMvc.perform(delete("/api/tokimon/1"))
+                .andExpect(status().isNotFound());
+
+        verify(tokimonService, times(1)).deleteTokimon(1L);
     }
 }

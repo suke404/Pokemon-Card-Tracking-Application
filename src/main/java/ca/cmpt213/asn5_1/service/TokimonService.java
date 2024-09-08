@@ -1,44 +1,57 @@
-package ca.cmpt213.asn5_1.server;
+package ca.cmpt213.asn5_1.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import ca.cmpt213.asn5_1.model.Tokimon;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class TokimonService {
-    @Autowired
-    private TokimonRepository tokimonRepository;
+    private final List<Tokimon> tokimonList = new ArrayList<>();
 
     public List<Tokimon> getAllTokimon() {
-        return tokimonRepository.findAll();
+        return new ArrayList<>(tokimonList);
     }
 
     public Tokimon getTokimonById(Long id) {
-        return tokimonRepository.findById(id).orElse(null);
+        return tokimonList.stream()
+                .filter(tokimon -> tokimon.getId().equals(id))
+                .findFirst()
+                .orElse(null);
     }
 
     public void addTokimon(Tokimon tokimon) {
-        tokimonRepository.save(tokimon);
+        if (tokimon.getId() == null) {
+            tokimon.setId(++Tokimon.idCounter);
+        }
+        tokimonList.add(tokimon);
     }
 
     public Tokimon editTokimon(Long id, Tokimon updatedTokimon) {
-        if (tokimonRepository.findById(id).isPresent()) {
-            updatedTokimon.setId(id);
-            tokimonRepository.update(updatedTokimon);
-            return updatedTokimon;
-        } else {
-            return null;
+        Optional<Tokimon> optionalTokimon = tokimonList.stream()
+                .filter(tokimon -> tokimon.getId().equals(id))
+                .findFirst();
+
+        if (optionalTokimon.isPresent()) {
+            Tokimon existingTokimon = optionalTokimon.get();
+            existingTokimon.setName(updatedTokimon.getName());
+            existingTokimon.setType(updatedTokimon.getType());
+            existingTokimon.setRarity(updatedTokimon.getRarity());
+            existingTokimon.setPictureUrl(updatedTokimon.getPictureUrl());
+            existingTokimon.setHp(updatedTokimon.getHp());
+            return existingTokimon;
         }
+
+        return null;
     }
 
     public boolean deleteTokimon(Long id) {
-        if (tokimonRepository.findById(id).isPresent()) {
-            tokimonRepository.deleteById(id);
-            return true;
-        } else {
-            return false;
-        }
+        return tokimonList.removeIf(tokimon -> tokimon.getId().equals(id));
+    }
+
+    public void deleteAllTokimons() {
+        tokimonList.clear();
     }
 }
